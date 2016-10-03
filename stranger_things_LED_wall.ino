@@ -1,6 +1,7 @@
 #include <Adafruit_NeoPixel.h>
 
 #define LED_OUTPUT 1    // Output pin that the Neo Pixel LEDs are attached to
+#define BTN_INPUT 0     // Input pin that button is attached to
 #define NUM_LEDS 26     // Total number of LEDs (this should always be 26)
 
 const uint32_t yellow = 0xFFFF00;
@@ -45,17 +46,14 @@ const uint32_t* const gColors[] = {
   &red      // Z
 };
 
-const String gMessages[] = {
-  "abcdef",
-  "right here",
-  "run",
-  "friends don't lie"
+const char* const gMessages[] = {
+  "ABCDEF",
+  "RIGHTHERE",
+  "RUN",
+  "FRIENDSDONTLIE"
 };
 
-// Assumes ascii input ranging from 'A'–'Z'
-//#define GetIndexForLetter(letter) (((letter) < 'I') ? ((letter) - 'A') : ((letter) - 'A')) // For LEDs in zig-zag order where I–Q is reversed
-//#define GetIndexForLetter(letter) (((letter) >= 'I' && (letter) <= 'Q') ? (32 - (letter) + 'A') : ((letter) - 'A')) // For LEDs in zig-zag order where I–Q is reversed
-//#define GetIndexForLetter(letter) ((letter) - 'A') // For LEDs in order A to Z
+const uint8_t gNumMessages = sizeof(gMessages) / sizeof(*gMessages);
 
 enum Mode { BLINK, SEQUENCE_SINGLE, SEQUENCE_CUMULATIVE, MESSAGE };
 
@@ -63,33 +61,83 @@ Adafruit_NeoPixel chain = Adafruit_NeoPixel(NUM_LEDS, LED_OUTPUT);
 
 Mode mode = MESSAGE;
 
+uint8_t messageIndex = 0;
+
 void setup() {
-  chain.begin();
-  chain.setBrightness(40);
-  turnOffStrip();
-  //    initMsg(0);
+    // Configure button
+    pinMode(BTN_INPUT, INPUT);
+    digitalWrite(BTN_INPUT, HIGH);
+    
+    chain.begin();
+    chain.setBrightness(40);
+    turnOffStrip();
+    initMsg(0);
+    initSequence();
+    initBlink();
 }
 
 void loop() {
-  switch (mode) {
-    case BLINK:
-      doBlink();
-      break;
-    case SEQUENCE_SINGLE:
-      doSequenceSingle();
-      break;
-    case SEQUENCE_CUMULATIVE:
-      doSequenceCumulative();
-      break;
-    case MESSAGE:
-      doMessage();
-      break;
-  }
+    checkButton();
+    
+    switch (mode) {
+        case BLINK:
+            doBlink();
+            break;
+        case SEQUENCE_SINGLE:
+            doSequenceSingle();
+            break;
+        case SEQUENCE_CUMULATIVE:
+            doSequenceCumulative();
+            break;
+        case MESSAGE:
+            doMessage();
+//            blinkNum(num, red);
+            break;
+    }
+}
+
+// Detect Button Press -----------------------------
+
+bool btn_pressed = false;
+
+void checkButton() {
+    if (! digitalRead(BTN_INPUT)) {  // if the button is pressed
+        if (!btn_pressed) { // button wasn't previously pressed
+            btn_pressed = true;
+            onButtonDown();
+        }
+    } else { // button is not pressed
+        if (btn_pressed) {
+            btn_pressed = false;
+            onButtonUp();
+        }
+    }
+}
+
+void onButtonUp() {
+    messageIndex = (messageIndex + 1) % (gNumMessages + MESSAGE);
+    if (messageIndex < gNumMessages) {
+        mode = MESSAGE;
+        initMsg(messageIndex);
+    } else {
+        mode = static_cast<Mode>(messageIndex - gNumMessages);
+        mode == BLINK ? initBlink() : initSequence();
+    }
+    turnOffStrip();
+    delay(1000);
+}
+
+void onButtonDown() {
+    
 }
 
 // Blink Mode --------------------------------------
 
 bool blink_on = false;
+
+void initBlink() {
+    blink_on = false;
+}
 
 void doBlink() {
   blink_on = !blink_on;
@@ -103,6 +151,10 @@ void doBlink() {
 // Sequence Mode -----------------------------------
 
 uint8_t seq_index = 0;
+
+void initSequence() {
+    seq_index = 0;
+}
 
 void doSequenceSingle() {
   if (seq_index > 0) {
@@ -131,29 +183,24 @@ void doSequence() {
 
 // Message -----------------------------------------
 uint8_t msg_index = 0;
-const char* msg_string = "ABCDEFGHIJKLMNOPQRSTUVWXYZZYXWVUTSRQPONMLKJIHGFEDCBAABCDEFGHQPONMLKJRST";// Max chars 71
+//const char* msg_string = "ABCDEFGHIJKLMNOPQRSTUVWXYZZYXWVUTSRQPONMLKJIHGFEDCBAABCDEFGHQPONMLKJRST";// Max chars 71
+char * msg_string = gMessages[0];
 
 void initMsg(uint8_t index) {
-//  String input = gMessages[index];
-//  input.toUpperCase();
-//  msg_string = "";
-//  for (char& c : input) {
-//    if (c >= 'A' && c <= 'Z') {
-//      msg_string += c;
-//    }
-//  }
+    msg_index = 0;
+    msg_string = gMessages[index];
 }
 
 void doMessage() {
-  if (msg_index >= strlen(msg_string)) {
-    // Done with message, turn everything off for 1 second
-    turnOffStrip();
-    msg_index = 0;
-    delay(1000);
-  } else {
+    if (msg_index >= strlen(msg_string)) {
+        // Done with message, turn everything off for 1 second
+        turnOffStrip();
+        msg_index = 0;
+        delay(1000);
+    } else {
     if (msg_index > 0) {
-      // Turn off previous letter
-      chain.setPixelColor(GetIndexForLetter(msg_string[msg_index - 1]), 0); 
+        // Turn off previous letter
+        chain.setPixelColor(GetIndexForLetter(msg_string[msg_index - 1]), 0); 
     }
 
     // Turn on this letter
@@ -165,13 +212,6 @@ void doMessage() {
 }
 
 // Utils -------------------------------------------
-
-void reset() {
-  turnOffStrip();
-  blink_on = false;
-  seq_index = 0;
-  msg_index = 0;
-}
 
 void turnOffStrip() {
   for (int i = 0; i < NUM_LEDS; i++) {
