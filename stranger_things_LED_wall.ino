@@ -46,8 +46,8 @@ const uint32_t* const gColors[] = {
   &red      // Z
 };
 
+// These messages must be uppercase with only alphabetical characters
 const char* const gMessages[] = {
-  "ABCDEF",
   "RIGHTHERE",
   "RUN",
   "FRIENDSDONTLIE"
@@ -183,16 +183,15 @@ void doSequence() {
 
 // Message -----------------------------------------
 uint8_t msg_index = 0;
-//const char* msg_string = "ABCDEFGHIJKLMNOPQRSTUVWXYZZYXWVUTSRQPONMLKJIHGFEDCBAABCDEFGHQPONMLKJRST";// Max chars 71
-char * msg_string = gMessages[0];
+char * msg_chars = gMessages[0];
 
 void initMsg(uint8_t index) {
     msg_index = 0;
-    msg_string = gMessages[index];
+    msg_chars = gMessages[index];
 }
 
 void doMessage() {
-    if (msg_index >= strlen(msg_string)) {
+    if (msg_index >= strlen(msg_chars)) {
         // Done with message, turn everything off for 1 second
         turnOffStrip();
         msg_index = 0;
@@ -200,11 +199,11 @@ void doMessage() {
     } else {
     if (msg_index > 0) {
         // Turn off previous letter
-        chain.setPixelColor(GetIndexForLetter(msg_string[msg_index - 1]), 0); 
+        chain.setPixelColor(GetIndexForLetter(msg_chars[msg_index - 1]), 0); 
     }
 
     // Turn on this letter
-    uint8_t index = GetIndexForLetter(msg_string[msg_index++]);
+    uint8_t index = GetIndexForLetter(msg_chars[msg_index++]);
     chain.setPixelColor(index, *gColors[index]);
     chain.show();
     delay(1000);
