@@ -1,78 +1,48 @@
 #include <Adafruit_NeoPixel.h>
 
-#define LED_OUTPUT 0    // Output pin that the Neo Pixel LEDs are attached to
+#define LED_OUTPUT 1    // Output pin that the Neo Pixel LEDs are attached to
 #define NUM_LEDS 26     // Total number of LEDs (this should always be 26)
 
-// Index in the neopixel chain for each letter. Since the chain makes a zig-zag configuration, I–Q are in backwards order.
-// Change this if your neopixel LEDs are arranged in a different order.
-const uint8_t * const gCharLookupTable[] = {
-    // First Row
-    0,  // A
-    1,  // B
-    2,  // C
-    3,  // D
-    4,  // E
-    5,  // F
-    6,  // G
-    7,  // H
-
-    // Second Row
-    16, // I
-    15, // J
-    14, // K
-    13, // L
-    12, // M
-    11, // N
-    10, // O
-    9, // P
-    8, // Q
-
-    // Third Row
-    17, // R
-    18, // S
-    19, // T
-    20, // U
-    21, // V
-    22, // W
-    23, // X
-    24, // Y
-    25  // Z
-};
+const uint32_t yellow = 0xFFFF00;
+const uint32_t blue = 0x0000FF;
+const uint32_t red = 0xFF0000;
+const uint32_t green = 0x00FF00;
+const uint32_t orange = 0xFF9A00;
 
 // Colors for each light in the chain. The order corresponds to the index order of the neopixels, not alphabetical.
 // These colors
-const uint32_t * const gColors[] = {
+const uint32_t* const gColors[] = {
   // First Row
-  0xFDF4FD,   // A – yellow
-  0x0ABEFF,   // B – blue
-  0xFF00CF,   // C – red
-  0x97D7C8,   // D – green
-  0x4FC2DE,   // E – blue
-  0xFBD056,   // F – orange
-  0xE7699B,   // G – red
-  0x49B3CB,   // H – green
+  &yellow,  // A
+  &blue,    // B
+  &red,     // C
+  &green,   // D
+  &blue,    // E
+  &orange,  // F
+  &red,     // G
+  &green,   // H
 
   // Second Row
-  0xE10054,   // Q – red
-  0x94EDED,   // P – green
-  0xB8439A,   // O – red
-  0xE2AAD0,   // N – pink
-  0xFCD977,   // M – orange
-  0x16E492,   // L – green
-  0x56D0F1,   // K – blue
-  0xDD8DCC,   // J – pink
-  0x89E9F0,   // I – green
+  &red,     // Q
+  &green,   // P
+  &red,     // O
+  &red,     // N
+  &orange,  // M
+  &green,   // L
+  &blue,    // K
+  &red,     // J
+  &green,   // I
 
   // Third Row
-  0x2BFFAA,   // R – green
-  0xF8CB3D,   // S – yellow
-  0xF7C04B,   // T – orange
-  0x00A5FF,   // U – blue
-  0xFF3A59,   // V – red
-  0x42AAD2,   // W – blue
-  0xF8D24E,   // X – orange
-  0xFF3263,   // Y – red
-  0xFF0F4B    // Z – red
+  &green,   // R
+  &yellow,  // S
+  &orange,  // T
+  &blue,    // U
+  &red,     // V
+  &blue,    // W
+  &orange,  // X
+  &red,     // Y
+  &red      // Z
 };
 
 const String gMessages[] = {
@@ -82,8 +52,10 @@ const String gMessages[] = {
   "friends don't lie"
 };
 
-#define GetIndexForLetter(letter) gCharLookupTable[(letter) - 'A'] // Assumes ascii input ranging from 'A'–'Z'
-//#define GetIndexForLetter(letter) ((letter) - 'A') // Assumes ascii input ranging from 'A'–'Z'
+// Assumes ascii input ranging from 'A'–'Z'
+//#define GetIndexForLetter(letter) (((letter) < 'I') ? ((letter) - 'A') : ((letter) - 'A')) // For LEDs in zig-zag order where I–Q is reversed
+//#define GetIndexForLetter(letter) (((letter) >= 'I' && (letter) <= 'Q') ? (32 - (letter) + 'A') : ((letter) - 'A')) // For LEDs in zig-zag order where I–Q is reversed
+//#define GetIndexForLetter(letter) ((letter) - 'A') // For LEDs in order A to Z
 
 enum Mode { BLINK, SEQUENCE_SINGLE, SEQUENCE_CUMULATIVE, MESSAGE };
 
@@ -122,7 +94,7 @@ bool blink_on = false;
 void doBlink() {
   blink_on = !blink_on;
   for (int i = 0; i < NUM_LEDS; i++) {
-    chain.setPixelColor(i, blink_on ? gColors[i] : 0);
+    chain.setPixelColor(i, blink_on ? *gColors[i] : 0);
   }
   chain.show();
   delay(500);
@@ -152,23 +124,14 @@ void doSequenceCumulative() {
 }
 
 void doSequence() {
-  chain.setPixelColor(seq_index++, gColors[seq_index]);
+  chain.setPixelColor(seq_index++, *gColors[seq_index]);
   chain.show();
   delay(500);
 }
 
 // Message -----------------------------------------
 uint8_t msg_index = 0;
-const char msg_string[] = "ABCDE\0"; 
-
-void testMsg() {
-    chain.setPixelColor(strlen(msg_string), 0xFF0000);
-    chain.show();
-    delay(1000);
-    chain.setPixelColor(strlen(msg_string), 0);
-    chain.show();
-    delay(1000);
-}
+const char* msg_string = "ABCDEFGHIJKLMNOPQRSTUVWXYZZYXWVUTSRQPONMLKJIHGFEDCBAABCDEFGHQPONMLKJRST";// Max chars 71
 
 void initMsg(uint8_t index) {
 //  String input = gMessages[index];
@@ -195,7 +158,7 @@ void doMessage() {
 
     // Turn on this letter
     uint8_t index = GetIndexForLetter(msg_string[msg_index++]);
-    chain.setPixelColor(index, gColors[index]);
+    chain.setPixelColor(index, *gColors[index]);
     chain.show();
     delay(1000);
   }
@@ -215,4 +178,17 @@ void turnOffStrip() {
     chain.setPixelColor(i, 0);
   }
   chain.show();  // Initialize all pixels to 'off'
+}
+
+uint8_t GetIndexForLetter(char letter) {
+    return (letter < 'I' || letter > 'Q') ? (letter - 'A') : (24 - letter + 'A');
+}
+
+void blinkNum(uint8_t num, uint32_t color) {
+    chain.setPixelColor(num, color);
+    chain.show();
+    delay(1000);
+    chain.setPixelColor(num, 0);
+    chain.show();
+    delay(1000);
 }
