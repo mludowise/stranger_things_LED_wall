@@ -4,47 +4,53 @@
 #define BTN_INPUT 0     // Input pin that button is attached to
 #define NUM_LEDS 26     // Total number of LEDs (this should always be 26)
 
-const uint32_t yellow = 0xFFFF00;
-const uint32_t blue = 0x0000FF;
-const uint32_t red = 0xFF0000;
-const uint32_t green = 0x00FF00;
-const uint32_t orange = 0xFF9A00;
+enum LightColor { YELLOW, BLUE, RED, GREEN, ORANGE };
 
 // Colors for each light in the chain. The order corresponds to the index order of the neopixels, not alphabetical.
 // These colors
-const uint32_t* const gColors[] = {
+const LightColor gColors[] = {
   // First Row
-  &yellow,  // A
-  &blue,    // B
-  &red,     // C
-  &green,   // D
-  &blue,    // E
-  &orange,  // F
-  &red,     // G
-  &green,   // H
+  YELLOW,  // A
+  BLUE,    // B
+  RED,     // C
+  GREEN,   // D
+  BLUE,    // E
+  ORANGE,  // F
+  RED,     // G
+  GREEN,   // H
 
   // Second Row
-  &red,     // Q
-  &green,   // P
-  &red,     // O
-  &red,     // N
-  &orange,  // M
-  &green,   // L
-  &blue,    // K
-  &red,     // J
-  &green,   // I
+  RED,     // Q
+  GREEN,   // P
+  RED,     // O
+  RED,     // N
+  ORANGE,  // M
+  GREEN,   // L
+  BLUE,    // K
+  RED,     // J
+  GREEN,   // I
 
   // Third Row
-  &green,   // R
-  &yellow,  // S
-  &orange,  // T
-  &blue,    // U
-  &red,     // V
-  &blue,    // W
-  &orange,  // X
-  &red,     // Y
-  &red      // Z
+  GREEN,   // R
+  YELLOW,  // S
+  ORANGE,  // T
+  BLUE,    // U
+  RED,     // V
+  BLUE,    // W
+  ORANGE,  // X
+  RED,     // Y
+  RED      // Z
 };
+
+#define GetColorForEnum(lightColor) (   \
+    lightColor == YELLOW ? 0xFFFF00 :   \
+    lightColor == BLUE ? 0x0000FF :     \
+    lightColor == RED ? 0xFF0000 :      \
+    lightColor == GREEN ? 0x00FF00 :    \
+    lightColor == ORANGE ? 0xFF9A00 :   \
+    0                                   \
+)
+#define GetColorForIndex(index) (GetColorForEnum(gColors[index]))
 
 // These messages must be uppercase with only alphabetical characters
 const char* const gMessages[] = {
@@ -142,7 +148,7 @@ void initBlink() {
 void doBlink() {
   blink_on = !blink_on;
   for (int i = 0; i < NUM_LEDS; i++) {
-    chain.setPixelColor(i, blink_on ? *gColors[i] : 0);
+    chain.setPixelColor(i, blink_on ? GetColorForIndex(i) : 0);
   }
   chain.show();
   delay(500);
@@ -176,7 +182,7 @@ void doSequenceCumulative() {
 }
 
 void doSequence() {
-  chain.setPixelColor(seq_index++, *gColors[seq_index]);
+  chain.setPixelColor(seq_index++, GetColorForIndex(seq_index));
   chain.show();
   delay(500);
 }
@@ -204,7 +210,7 @@ void doMessage() {
 
     // Turn on this letter
     uint8_t index = GetIndexForLetter(msg_chars[msg_index++]);
-    chain.setPixelColor(index, *gColors[index]);
+    chain.setPixelColor(index, GetColorForIndex(index));
     chain.show();
     delay(1000);
   }
