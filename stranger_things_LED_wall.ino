@@ -197,23 +197,21 @@ void initMsg(uint8_t index) {
 }
 
 void doMessage() {
-    if (msg_index >= strlen(msg_chars)) {
-        // Done with message, turn everything off for 1 second
-        turnOffStrip();
-        msg_index = 0;
-        delay(1000);
-    } else {
     if (msg_index > 0) {
         // Turn off previous letter
         chain.setPixelColor(GetIndexForLetter(msg_chars[msg_index - 1]), 0); 
     }
-
-    // Turn on this letter
-    uint8_t index = GetIndexForLetter(msg_chars[msg_index++]);
-    chain.setPixelColor(index, GetColorForIndex(index));
+    
+    if (msg_index >= strlen(msg_chars)) {
+        // Done with message, turn everything off for 1 second
+        msg_index = 0;
+    } else {
+        // Turn on this letter
+        uint8_t index = GetIndexForLetter(msg_chars[msg_index++]);
+        chain.setPixelColor(index, GetColorForIndex(index));
+    }
     chain.show();
     delay(1000);
-  }
 }
 
 // Utils -------------------------------------------
