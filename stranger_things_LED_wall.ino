@@ -84,21 +84,22 @@ void setup() {
 
 void loop() {
     checkButton();
-    
-    switch (mode) {
-        case BLINK:
-            doBlink();
-            break;
-        case SEQUENCE_SINGLE:
-            doSequenceSingle();
-            break;
-        case SEQUENCE_CUMULATIVE:
-            doSequenceCumulative();
-            break;
-        case MESSAGE:
-            doMessage();
-//            blinkNum(num, red);
-            break;
+
+    if (! checkIfWaiting() ) {
+        switch (mode) {
+            case BLINK:
+                doBlink();
+                break;
+            case SEQUENCE_SINGLE:
+                doSequenceSingle();
+                break;
+            case SEQUENCE_CUMULATIVE:
+                doSequenceCumulative();
+                break;
+            case MESSAGE:
+                doMessage();
+                break;
+        }
     }
 }
 
@@ -146,12 +147,12 @@ void initBlink() {
 }
 
 void doBlink() {
-  blink_on = !blink_on;
-  for (int i = 0; i < NUM_LEDS; i++) {
-    chain.setPixelColor(i, blink_on ? GetColorForIndex(i) : 0);
-  }
-  chain.show();
-  delay(500);
+    blink_on = !blink_on;
+    for (int i = 0; i < NUM_LEDS; i++) {
+        chain.setPixelColor(i, blink_on ? GetColorForIndex(i) : 0);
+    }
+    chain.show();
+    setWait(500);
 }
 
 // Sequence Mode -----------------------------------
@@ -163,28 +164,28 @@ void initSequence() {
 }
 
 void doSequenceSingle() {
-  if (seq_index > 0) {
-    // Turn off previous color
-    chain.setPixelColor(seq_index - 1, 0);
-  }
-  seq_index %= NUM_LEDS;
-  doSequence();
+    if (seq_index > 0) {
+        // Turn off previous color
+        chain.setPixelColor(seq_index - 1, 0);
+    }
+    seq_index %= NUM_LEDS;
+    doSequence();
 }
 
 void doSequenceCumulative() {
-  if (seq_index >= NUM_LEDS) {
-    turnOffStrip();
-    seq_index = 0;
-    delay(1000);
-  } else {
-    doSequence();
-  }
+    if (seq_index >= NUM_LEDS) {
+        turnOffStrip();
+        seq_index = 0;
+        setWait(1000);
+    } else {
+        doSequence();
+    }
 }
 
 void doSequence() {
-  chain.setPixelColor(seq_index++, GetColorForIndex(seq_index));
-  chain.show();
-  delay(500);
+    chain.setPixelColor(seq_index++, GetColorForIndex(seq_index));
+    chain.show();
+    setWait(500);
 }
 
 // Message -----------------------------------------
@@ -211,7 +212,26 @@ void doMessage() {
         chain.setPixelColor(index, GetColorForIndex(index));
     }
     chain.show();
-    delay(1000);
+    setWait(1000);
+}
+
+/* Delay Utilities ---------------------------------
+
+    We can't use the delay() method because then we 
+    won't detect the button press unless it's held 
+    down throughout the duration of the current delay();
+
+    Instead, we'll continuously loop and check if the
+    intended wait time has passed to light up the LEDs.
+*/
+unsigned long waitUntil = 0;
+
+void setWait(int milliseconds) {
+    waitUntil = millis() + milliseconds;
+}
+
+bool checkIfWaiting() {
+    return millis() < waitUntil;
 }
 
 // Utils -------------------------------------------
