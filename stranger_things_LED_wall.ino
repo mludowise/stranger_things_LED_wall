@@ -152,7 +152,7 @@ void doBlink() {
         chain.setPixelColor(i, blink_on ? GetColorForIndex(i) : 0);
     }
     chain.show();
-    setWait(500);
+    setWait(random(100, 700));
 }
 
 // Sequence Mode -----------------------------------
