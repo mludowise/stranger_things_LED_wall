@@ -42,6 +42,7 @@ const LightColor gColors[] = {
   RED      // Z
 };
 
+<<<<<<< Updated upstream
 #define GetColorForEnum(lightColor) (   \
     lightColor == YELLOW ? 0xFFFF00 :   \
     lightColor == BLUE ? 0x0000FF :     \
@@ -52,6 +53,8 @@ const LightColor gColors[] = {
 )
 #define GetColorForIndex(index) (GetColorForEnum(gColors[index]))
 
+=======
+>>>>>>> Stashed changes
 // These messages must be uppercase with only alphabetical characters
 const char* const gMessages[] = {
   "RIGHTHERE",
@@ -198,19 +201,33 @@ void initMsg(uint8_t index) {
 }
 
 void doMessage() {
+<<<<<<< Updated upstream
     if (msg_index > 0) {
         // Turn off previous letter
         chain.setPixelColor(GetIndexForLetter(msg_chars[msg_index - 1]), 0); 
     }
     
+=======
+>>>>>>> Stashed changes
     if (msg_index >= strlen(msg_chars)) {
         // Done with message, turn everything off for 1 second
         msg_index = 0;
     } else {
+<<<<<<< Updated upstream
         // Turn on this letter
         uint8_t index = GetIndexForLetter(msg_chars[msg_index++]);
         chain.setPixelColor(index, GetColorForIndex(index));
     }
+=======
+    if (msg_index > 0) {
+        // Turn off previous letter
+        chain.setPixelColor(GetIndexForLetter(msg_chars[msg_index - 1]), 0); 
+    }
+
+    // Turn on this letter
+    uint8_t index = GetIndexForLetter(msg_chars[msg_index++]);
+    chain.setPixelColor(index, *gColors[index]);
+>>>>>>> Stashed changes
     chain.show();
     setWait(1000);
 }
