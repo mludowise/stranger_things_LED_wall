@@ -1,7 +1,7 @@
 #include <Adafruit_NeoPixel.h>
 
-#define LED_OUTPUT 1    // Output pin that the Neo Pixel LEDs are attached to
-#define BTN_INPUT 0     // Input pin that button is attached to
+#define LED_OUTPUT 0    // Output pin that the Neo Pixel LEDs are attached to
+#define BTN_INPUT 2     // Input pin that button is attached to
 #define NUM_LEDS 26     // Total number of LEDs (this should always be 26)
 
 enum LightColor { YELLOW, BLUE, RED, GREEN, ORANGE };
