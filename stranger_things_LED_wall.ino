@@ -180,6 +180,7 @@ void doMessage() {
         uint8_t i = getIndexForLetter(message[index++]);
         chain.setPixelColor(i, getColorForIndex(i));
     }
+    
     chain.show();
     setWait(1000);
 }
