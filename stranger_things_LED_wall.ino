@@ -63,7 +63,6 @@ SoftwareSerial bt(RX_PIN, -1);
 Adafruit_NeoPixel chain = Adafruit_NeoPixel(NUM_LEDS, LED_OUTPUT);
 
 Mode mode = MESSAGE;
-uint8_t messageIndex = 0;
 uint8_t index = 0;
 char message[MAX_MSG_LEN + 1] = "RUN";
 
