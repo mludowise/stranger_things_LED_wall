@@ -1,8 +1,14 @@
+#include <SoftwareSerial.h>
 #include <Adafruit_NeoPixel.h>
+#ifdef __AVR_ATtiny85__ // Trinket, Gemma, etc.
+    #include <avr/power.h>
+#endif
 
-#define LED_OUTPUT 0    // Output pin that the Neo Pixel LEDs are attached to
-#define BTN_INPUT 2     // Input pin that button is attached to
-#define NUM_LEDS 26     // Total number of LEDs (this should always be 26)
+#define RX_PIN		2	// Connect this Trinket pin to BLE 'TXO' pin
+#define CTS_PIN		1	// Connect this Trinket pin to BLE 'CTS' pin
+#define LED_OUTPUT	0	// Connect NeoPixels to this Trinket pin
+#define NUM_LEDS	26	// Total number of LEDs (this should always be 26)
+#define MAX_MSG_LEN	20	// Maximum message size
 
 enum LightColor { YELLOW, BLUE, RED, GREEN, ORANGE };
 
@@ -53,77 +59,50 @@ const uint8_t gNumMessages = sizeof(gMessages) / sizeof(*gMessages);
 
 enum Mode { BLINK, SEQUENCE_SINGLE, SEQUENCE_CUMULATIVE, MESSAGE };
 
+SoftwareSerial bt(RX_PIN, -1);
 Adafruit_NeoPixel chain = Adafruit_NeoPixel(NUM_LEDS, LED_OUTPUT);
 
 Mode mode = MESSAGE;
 uint8_t messageIndex = 0;
 uint8_t index = 0;
-char * message = gMessages[messageIndex];
+char message[MAX_MSG_LEN + 1] = "RUN";
 
 void setup() {
-    // Configure button
-    pinMode(BTN_INPUT, INPUT);
-    digitalWrite(BTN_INPUT, HIGH);
-    
+	#if defined(__AVR_ATtiny85__) && (F_CPU == 16000000L)
+		// MUST do this on 16 MHz Trinket for serial & NeoPixels!
+		clock_prescale_set(clock_div_1);
+	#endif
+	// Stop incoming data & init software serial
+	pinMode(CTS_PIN, OUTPUT); digitalWrite(CTS_PIN, HIGH);
+	bt.begin(9600);
+
     chain.begin();
     chain.setBrightness(40);
     turnOffStrip();
 }
 
 void loop() {
-    checkButton();
 
-    if (! checkIfWaiting() ) {
-        switch (mode) {
-            case BLINK:
-                doBlink();
-                break;
-            case SEQUENCE_SINGLE:
-                doSequenceSingle();
-                break;
-            case SEQUENCE_CUMULATIVE:
-                doSequenceCumulative();
-                break;
-            case MESSAGE:
-                doMessage();
-                break;
-        }
-    }
-}
+    checkBluetooth();
 
-// Detect Button Press -----------------------------
+//    if (! checkIfWaiting() ) {
+	    doMessage();
 
-bool btn_pressed = false;
-
-void checkButton() {
-    if (! digitalRead(BTN_INPUT)) {  // if the button is pressed
-        if (!btn_pressed) { // button wasn't previously pressed
-            btn_pressed = true;
-            onButtonDown();
-        }
-    } else { // button is not pressed
-        if (btn_pressed) {
-            btn_pressed = false;
-            onButtonUp();
-        }
-    }
-}
-
-void onButtonUp() {
-    messageIndex = (messageIndex + 1) % (gNumMessages + MESSAGE);	// Increment messageIndex
-    if (messageIndex < gNumMessages) {								// messageIndex corresponds to a valid message
-        mode = MESSAGE;
-        message = gMessages[messageIndex];						// Update message
-    } else {														// messageIndex corresponds to a different mode
-        mode = static_cast<Mode>(messageIndex - gNumMessages);
-    }
-    index = 0;	//
-    turnOffStrip();
-    delay(1000);
-}
-
-void onButtonDown() {
-    
+//        switch (mode) {
+//            case BLINK:
+//                doBlink();
+//                break;
+//            case SEQUENCE_SINGLE:
+//                doSequenceSingle();
+//                break;
+//            case SEQUENCE_CUMULATIVE:
+//                doSequenceCumulative();
+//                break;
+//            case MESSAGE:
+//                doMessage();
+//                break;
+//        }
+//    }
 }
 
 // Blink Mode --------------------------------------
@@ -166,6 +145,23 @@ void doSequence() {
 
 // Message -----------------------------------------
 
+void initMsg(char* newMsg) {
+    index = 0;
+    
+	int j=0;
+    for (int i = 0; i < strlen(newMsg); i++) {
+    	char c = newMsg[i];
+    	if (c >= 'a' && c <= 'z') {
+    		c = c + ('A' - 'a');
+    	} else if (c < 'A' || c > 'Z') {
+    		continue;
+    	}
+    	message[j++] = c;
+    }
+
+	message[j] = 0;
+}
+
 void doMessage() {
     if (index > 0) {
         // Turn off previous letter
@@ -183,6 +179,34 @@ void doMessage() {
     
     chain.show();
     setWait(1000);
+}
+
+// Bluetooth ---------------------------------------
+
+void checkBluetooth() {
+	int i = 0;
+	char tempMsg[MAX_MSG_LEN + 1];
+	
+	// Animation happens at about 30 frames/sec.  Rendering frames takes less
+	// than that, so the idle time is used to monitor incoming serial data.
+	digitalWrite(CTS_PIN, LOW); // Signal to BLE, OK to send data!
+
+	i = bt.readBytes(tempMsg, MAX_MSG_LEN);
+	tempMsg[i] = 0;
+
+	if (strlen(tempMsg) > 0) {
+		flushBluetooth(); // If message exceeds MAX_MSG_LEN, flush the excess.
+		initMsg(tempMsg);
+		turnOffStrip();
+		delay(1000);
+	}
+	
+	digitalWrite(CTS_PIN, HIGH); // BLE STOP!
+}
+
+void flushBluetooth() {
+	char c;
+	while(bt.readBytes(&c, 1) > 0);
 }
 
 /* Delay Utilities ---------------------------------
