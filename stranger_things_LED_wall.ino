@@ -48,23 +48,14 @@ const LightColor gColors[] = {
   RED      // Z
 };
 
-// These messages must be uppercase with only alphabetical characters
-const char* const gMessages[] = {
-  "RIGHTHERE",
-  "RUN",
-  "FRIENDSDONTLIE"
-};
-
-const uint8_t gNumMessages = sizeof(gMessages) / sizeof(*gMessages);
-
 enum Mode { BLINK, SEQUENCE_SINGLE, SEQUENCE_CUMULATIVE, MESSAGE };
 
 SoftwareSerial bt(RX_PIN, -1);
 Adafruit_NeoPixel chain = Adafruit_NeoPixel(NUM_LEDS, LED_OUTPUT);
 
 Mode mode = MESSAGE;
+char message[MAX_MSG_LEN + 1] = "RIGHTHERE";
 uint8_t index = 0;
-char message[MAX_MSG_LEN + 1] = "RUN";
 
 void setup() {
 	#if defined(__AVR_ATtiny85__) && (F_CPU == 16000000L)
@@ -84,24 +75,22 @@ void loop() {
 
     checkBluetooth();
 
-//    if (! checkIfWaiting() ) {
-	    doMessage();
-
-//        switch (mode) {
-//            case BLINK:
-//                doBlink();
-//                break;
-//            case SEQUENCE_SINGLE:
-//                doSequenceSingle();
-//                break;
-//            case SEQUENCE_CUMULATIVE:
-//                doSequenceCumulative();
-//                break;
-//            case MESSAGE:
-//                doMessage();
-//                break;
-//        }
-//    }
+    if (! checkIfWaiting() ) {
+        switch (mode) {
+            case BLINK:
+                doBlink();
+                break;
+            case SEQUENCE_SINGLE:
+                doSequenceSingle();
+                break;
+            case SEQUENCE_CUMULATIVE:
+                doSequenceCumulative();
+                break;
+            case MESSAGE:
+                doMessage();
+                break;
+        }
+    }
 }
 
 // Blink Mode --------------------------------------
@@ -144,12 +133,10 @@ void doSequence() {
 
 // Message -----------------------------------------
 
-void initMsg(char* newMsg) {
-    index = 0;
-    
-	int j=0;
-    for (int i = 0; i < strlen(newMsg); i++) {
-    	char c = newMsg[i];
+void cleanMsg() {
+	uint8_t j=0;
+    for (uint8_t i = 0; i < strlen(message); i++) {
+    	char c = message[i];
     	if (c >= 'a' && c <= 'z') {
     		c = c + ('A' - 'a');
     	} else if (c < 'A' || c > 'Z') {
@@ -183,24 +170,57 @@ void doMessage() {
 // Bluetooth ---------------------------------------
 
 void checkBluetooth() {
-	int i = 0;
-	char tempMsg[MAX_MSG_LEN + 1];
+	char c;
 	
-	// Animation happens at about 30 frames/sec.  Rendering frames takes less
-	// than that, so the idle time is used to monitor incoming serial data.
-	digitalWrite(CTS_PIN, LOW); // Signal to BLE, OK to send data!
+	digitalWrite(CTS_PIN, LOW);		// Signal to BLE, OK to send data!
 
-	i = bt.readBytes(tempMsg, MAX_MSG_LEN);
-	tempMsg[i] = 0;
-
-	if (strlen(tempMsg) > 0) {
-		flushBluetooth(); // If message exceeds MAX_MSG_LEN, flush the excess.
-		initMsg(tempMsg);
-		turnOffStrip();
-		delay(1000);
+	if (bt.readBytes(&c, 1) <= 0) {	// If there's nothing to read, don't overwrite message
+		return;
 	}
+	if (c == '!') {
+		if (parseMode() >= 0) {
+			turnOff1s();
+		}
+	} else {
+		parseMessage(c);
+		turnOff1s();
+	}
+
+	flushBluetooth();				// If message exceeds MAX_MSG_LEN, flush the excess.
 	
-	digitalWrite(CTS_PIN, HIGH); // BLE STOP!
+	digitalWrite(CTS_PIN, HIGH);	// BLE STOP!
+}
+
+void turnOff1s() {
+	turnOffStrip();					// Turn off the strip for 1 second to indicate a new message or mode
+	delay(1000);
+}
+
+void parseMessage(char firstChar) {
+	mode = MESSAGE;											// Set to MESSAGE mode
+	
+	message[0] = firstChar;								// Update first character of message
+	uint8_t i = bt.readBytes(message + 1, MAX_MSG_LEN - 1);	// Read the rest of the message
+	message[i+1] = 0;										// Set null terminator to indicate end of string
+	index = 0;												// Resets message index to 0
+	cleanMsg();												// Cleans up any invalid characters from message
+}
+
+uint8_t parseMode() {
+	char buffer[3];
+
+	// Expected input should be ['B']['x']['1'] for button pressed
+
+	if (bt.readBytes(buffer, 3) < 3 			// Invalid input
+		|| buffer[0] != 'B'  					// Input wasn't a button press, ignore
+		|| buffer[1] < '1' || buffer[1] > '4') {	// Button wasn't 1-4, ignore
+		return -1;
+	}
+
+	mode = buffer[1] - '1';						// Set's mode to raw MODE enum value
+	index = 0;									// Reset index counter
+	return mode;
+	
 }
 
 void flushBluetooth() {
@@ -219,7 +239,7 @@ void flushBluetooth() {
 */
 unsigned long waitUntil = 0;
 
-void setWait(int milliseconds) {
+void setWait(uint16_t milliseconds) {
     waitUntil = millis() + milliseconds;
 }
 
