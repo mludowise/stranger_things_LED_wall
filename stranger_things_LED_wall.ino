@@ -42,16 +42,6 @@ const LightColor gColors[] = {
   RED      // Z
 };
 
-#define GetColorForEnum(lightColor) (   \
-    lightColor == YELLOW ? 0xFFFF00 :   \
-    lightColor == BLUE ? 0x0000FF :     \
-    lightColor == RED ? 0xFF0000 :      \
-    lightColor == GREEN ? 0x00FF00 :    \
-    lightColor == ORANGE ? 0xFF9A00 :   \
-    0                                   \
-)
-#define GetColorForIndex(index) (GetColorForEnum(gColors[index]))
-
 // These messages must be uppercase with only alphabetical characters
 const char* const gMessages[] = {
   "RIGHTHERE",
@@ -66,8 +56,9 @@ enum Mode { BLINK, SEQUENCE_SINGLE, SEQUENCE_CUMULATIVE, MESSAGE };
 Adafruit_NeoPixel chain = Adafruit_NeoPixel(NUM_LEDS, LED_OUTPUT);
 
 Mode mode = MESSAGE;
-
 uint8_t messageIndex = 0;
+uint8_t index = 0;
+char * message = gMessages[messageIndex];
 
 void setup() {
     // Configure button
@@ -77,9 +68,6 @@ void setup() {
     chain.begin();
     chain.setBrightness(40);
     turnOffStrip();
-    initMsg(0);
-    initSequence();
-    initBlink();
 }
 
 void loop() {
@@ -122,14 +110,14 @@ void checkButton() {
 }
 
 void onButtonUp() {
-    messageIndex = (messageIndex + 1) % (gNumMessages + MESSAGE);
-    if (messageIndex < gNumMessages) {
+    messageIndex = (messageIndex + 1) % (gNumMessages + MESSAGE);	// Increment messageIndex
+    if (messageIndex < gNumMessages) {								// messageIndex corresponds to a valid message
         mode = MESSAGE;
-        initMsg(messageIndex);
-    } else {
+        message = gMessages[messageIndex];						// Update message
+    } else {														// messageIndex corresponds to a different mode
         mode = static_cast<Mode>(messageIndex - gNumMessages);
-        mode == BLINK ? initBlink() : initSequence();
     }
+    index = 0;	//
     turnOffStrip();
     delay(1000);
 }
@@ -140,16 +128,10 @@ void onButtonDown() {
 
 // Blink Mode --------------------------------------
 
-bool blink_on = false;
-
-void initBlink() {
-    blink_on = false;
-}
-
 void doBlink() {
-    blink_on = !blink_on;
-    for (int i = 0; i < NUM_LEDS; i++) {
-        chain.setPixelColor(i, blink_on ? GetColorForIndex(i) : 0);
+    index = !index;
+    for (uint8_t i = 0; i < NUM_LEDS; i++) {
+        chain.setPixelColor(i, index ? getColorForIndex(i) : 0);
     }
     chain.show();
     setWait(random(100, 700));
@@ -157,25 +139,19 @@ void doBlink() {
 
 // Sequence Mode -----------------------------------
 
-uint8_t seq_index = 0;
-
-void initSequence() {
-    seq_index = 0;
-}
-
 void doSequenceSingle() {
-    if (seq_index > 0) {
+    if (index > 0) {
         // Turn off previous color
-        chain.setPixelColor(seq_index - 1, 0);
+        chain.setPixelColor(index - 1, 0);
     }
-    seq_index %= NUM_LEDS;
+    index %= NUM_LEDS;
     doSequence();
 }
 
 void doSequenceCumulative() {
-    if (seq_index >= NUM_LEDS) {
+    if (index >= NUM_LEDS) {
         turnOffStrip();
-        seq_index = 0;
+        index = 0;
         setWait(1000);
     } else {
         doSequence();
@@ -183,33 +159,26 @@ void doSequenceCumulative() {
 }
 
 void doSequence() {
-    chain.setPixelColor(seq_index++, GetColorForIndex(seq_index));
+    chain.setPixelColor(index++, getColorForIndex(index));
     chain.show();
     setWait(500);
 }
 
 // Message -----------------------------------------
-uint8_t msg_index = 0;
-char * msg_chars = gMessages[0];
-
-void initMsg(uint8_t index) {
-    msg_index = 0;
-    msg_chars = gMessages[index];
-}
 
 void doMessage() {
-    if (msg_index > 0) {
+    if (index > 0) {
         // Turn off previous letter
-        chain.setPixelColor(GetIndexForLetter(msg_chars[msg_index - 1]), 0); 
+        chain.setPixelColor(getIndexForLetter(message[index - 1]), 0); 
     }
     
-    if (msg_index >= strlen(msg_chars)) {
+    if (index >= strlen(message)) {
         // Done with message, turn everything off for 1 second
-        msg_index = 0;
+        index = 0;
     } else {
         // Turn on this letter
-        uint8_t index = GetIndexForLetter(msg_chars[msg_index++]);
-        chain.setPixelColor(index, GetColorForIndex(index));
+        uint8_t i = getIndexForLetter(message[index++]);
+        chain.setPixelColor(i, getColorForIndex(i));
     }
     chain.show();
     setWait(1000);
@@ -236,14 +205,29 @@ bool checkIfWaiting() {
 
 // Utils -------------------------------------------
 
+uint32_t getColorForEnum(LightColor lightColor) {
+	switch(lightColor) {
+    	case YELLOW: return 0xFFFF00;
+    	case BLUE: return 0x0000FF;
+    	case RED: return 0xFF0000;
+    	case GREEN: return 0x00FF00;
+    	case ORANGE: return 0xFF9A00;
+		default: return 0;
+	}
+}
+
+uint32_t getColorForIndex(uint8_t i) {
+	return getColorForEnum(gColors[i]);
+}
+
 void turnOffStrip() {
-  for (int i = 0; i < NUM_LEDS; i++) {
+  for (uint8_t i = 0; i < NUM_LEDS; i++) {
     chain.setPixelColor(i, 0);
   }
   chain.show();  // Initialize all pixels to 'off'
 }
 
-uint8_t GetIndexForLetter(char letter) {
+uint8_t getIndexForLetter(char letter) {
     return (letter < 'I' || letter > 'Q') ? (letter - 'A') : (24 - letter + 'A');
 }
 
