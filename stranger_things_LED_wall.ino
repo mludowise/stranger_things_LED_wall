@@ -10,52 +10,73 @@
 #define NUM_LEDS	26	// Total number of LEDs (this should always be 26)
 #define MAX_MSG_LEN	20	// Maximum message size
 
-enum LightColor { YELLOW, BLUE, RED, GREEN, ORANGE };
+// Modes - The mode the LEDs are in. MESSAGE
+#define BLINK				0	// Button 1 - All LEDs blink on and off at random intervals
+#define SEQUENCE_SINGLE		1	// Button 2 - One LED turns on at a time starting from the beginning of the LED chain
+#define SEQUENCE_CUMULATIVE 2	// Button 3 - The LEDs turn on and stay on one at a time from the beginning of the LED chain
+#define MESSAGE				3	// Button 4 - The LEDs light up to spell a message
+
+// Light Colors - These are stored as #define to save program storage space
+#define YELLOW	0
+#define BLUE	1
+#define RED		2
+#define GREEN	3
+#define ORANGE	4
+
+// Light Colors - Change these to tweak colors
+#define YELLOW_COLOR	0xFFFF00
+#define BLUE_COLOR 		0x0000FF
+#define RED_COLOR		0xFF0000
+#define GREEN_COLOR		0x00FF00
+#define ORANGE_COLOR	0xFF9A00
 
 // Colors for each light in the chain. The order corresponds to the index order of the neopixels, not alphabetical.
-// These colors
-const LightColor gColors[] = {
-  // First Row
-  YELLOW,  // A
-  BLUE,    // B
-  RED,     // C
-  GREEN,   // D
-  BLUE,    // E
-  ORANGE,  // F
-  RED,     // G
-  GREEN,   // H
+uint8_t getColorConstantForIndex(uint8_t inValue) {
+	switch (inValue) {
+		case 0:		// A
+		case 18:	// S
+			return YELLOW;
+		
+		case 1:		// B
+		case 4:		// E
+		case 14:	// K
+		case 20:	// U
+		case 22:	// W
+			return BLUE;
+		
+		case 2:		// C
+		case 6:		// G
+		case 8:		// Q
+		case 10:	// O
+		case 11:	// N
+		case 15:	// J
+		case 21:	// V
+		case 24:	// Y
+		case 25:	// Z
+			return RED;
+		
+		case 3:		// D
+		case 7:		// H
+		case 9:		// P
+		case 13:	// L
+		case 16:	// I
+		case 17:	// R
+			return GREEN;
+		
+		case 5:		// F
+		case 12:	// M
+		case 19:	// T
+		case 23:	// X
+			return ORANGE;
+	}
+}
 
-  // Second Row
-  RED,     // Q
-  GREEN,   // P
-  RED,     // O
-  RED,     // N
-  ORANGE,  // M
-  GREEN,   // L
-  BLUE,    // K
-  RED,     // J
-  GREEN,   // I
+uint8_t mode = MESSAGE;							// Change this to set the default mode of the LEDs (must be BLINK, SEQUENCE_SINGLE, SEQUENCE_CUMULATIVE, or MESSAGE).
+char message[MAX_MSG_LEN + 1] = "RIGHTHERE";	// Change this to set the default message (must be uppercase and letters only).
 
-  // Third Row
-  GREEN,   // R
-  YELLOW,  // S
-  ORANGE,  // T
-  BLUE,    // U
-  RED,     // V
-  BLUE,    // W
-  ORANGE,  // X
-  RED,     // Y
-  RED      // Z
-};
-
-enum Mode { BLINK, SEQUENCE_SINGLE, SEQUENCE_CUMULATIVE, MESSAGE };
-
-SoftwareSerial bt(RX_PIN, -1);
-Adafruit_NeoPixel chain = Adafruit_NeoPixel(NUM_LEDS, LED_OUTPUT);
-
-Mode mode = MESSAGE;
-char message[MAX_MSG_LEN + 1] = "RIGHTHERE";
 uint8_t index = 0;
+SoftwareSerial bt = SoftwareSerial(RX_PIN, -1);
+Adafruit_NeoPixel chain = Adafruit_NeoPixel(NUM_LEDS, LED_OUTPUT);
 
 void setup() {
 	#if defined(__AVR_ATtiny85__) && (F_CPU == 16000000L)
@@ -207,11 +228,11 @@ void parseMessage(char firstChar) {
 }
 
 uint8_t parseMode() {
-	char buffer[3];
+	char buffer[2];
 
 	// Expected input should be ['B']['x']['1'] for button pressed
 
-	if (bt.readBytes(buffer, 3) < 3 			// Invalid input
+	if (bt.readBytes(buffer, 2) < 2 			// Invalid input
 		|| buffer[0] != 'B'  					// Input wasn't a button press, ignore
 		|| buffer[1] < '1' || buffer[1] > '4') {	// Button wasn't 1-4, ignore
 		return -1;
@@ -220,7 +241,6 @@ uint8_t parseMode() {
 	mode = buffer[1] - '1';						// Set's mode to raw MODE enum value
 	index = 0;									// Reset index counter
 	return mode;
-	
 }
 
 void flushBluetooth() {
@@ -249,19 +269,19 @@ bool checkIfWaiting() {
 
 // Utils -------------------------------------------
 
-uint32_t getColorForEnum(LightColor lightColor) {
+uint32_t getColorForEnum(uint8_t lightColor) {
 	switch(lightColor) {
-    	case YELLOW: return 0xFFFF00;
-    	case BLUE: return 0x0000FF;
-    	case RED: return 0xFF0000;
-    	case GREEN: return 0x00FF00;
-    	case ORANGE: return 0xFF9A00;
+    	case YELLOW: return YELLOW_COLOR;
+    	case BLUE: return BLUE_COLOR;
+    	case RED: return RED_COLOR;
+    	case GREEN: return GREEN_COLOR;
+    	case ORANGE: return ORANGE_COLOR;
 		default: return 0;
 	}
 }
 
 uint32_t getColorForIndex(uint8_t i) {
-	return getColorForEnum(gColors[i]);
+	return getColorForEnum(getColorConstantForIndex(i));
 }
 
 void turnOffStrip() {
