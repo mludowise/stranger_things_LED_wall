@@ -16,23 +16,16 @@
 #define SEQUENCE_CUMULATIVE 2	// Button 3 - The LEDs turn on and stay on one at a time from the beginning of the LED chain
 #define MESSAGE				3	// Button 4 - The LEDs light up to spell a message
 
-// Light Colors - These are stored as #define to save program storage space
-#define YELLOW	0
-#define BLUE	1
-#define RED		2
-#define GREEN	3
-#define ORANGE	4
-
 // Light Colors - Change these to tweak colors
-#define YELLOW_COLOR	0xFFFF00
-#define BLUE_COLOR 		0x0000FF
-#define RED_COLOR		0xFF0000
-#define GREEN_COLOR		0x00FF00
-#define ORANGE_COLOR	0xFF9A00
+#define YELLOW		0xFFFF00
+#define BLUE 		0x0000FF
+#define RED			0xFF0000
+#define GREEN		0x00FF00
+#define ORANGE		0xFF9A00
 
 // Colors for each light in the chain. The order corresponds to the index order of the neopixels, not alphabetical.
-uint8_t getColorConstantForIndex(uint8_t inValue) {
-	switch (inValue) {
+uint32_t getColorForIndex(uint8_t i) {
+	switch (i) {
 		case 0:		// A
 		case 18:	// S
 			return YELLOW;
@@ -69,6 +62,15 @@ uint8_t getColorConstantForIndex(uint8_t inValue) {
 		case 23:	// X
 			return ORANGE;
 	}
+}
+
+// Returns the index (0-25) of the LED for the corresponding letter
+uint8_t getIndexForLetter(char letter) {
+	// Use this if letters are zig-zag in the chain
+    return (letter < 'I' || letter > 'Q') ? (letter - 'A') : (24 - letter + 'A');
+
+    // Use this if letters are sequential instead of zig-zag
+//    return letter - 'A';
 }
 
 uint8_t mode = MESSAGE;							// Change this to set the default mode of the LEDs (must be BLINK, SEQUENCE_SINGLE, SEQUENCE_CUMULATIVE, or MESSAGE).
@@ -269,30 +271,11 @@ bool checkIfWaiting() {
 
 // Utils -------------------------------------------
 
-uint32_t getColorForEnum(uint8_t lightColor) {
-	switch(lightColor) {
-    	case YELLOW: return YELLOW_COLOR;
-    	case BLUE: return BLUE_COLOR;
-    	case RED: return RED_COLOR;
-    	case GREEN: return GREEN_COLOR;
-    	case ORANGE: return ORANGE_COLOR;
-		default: return 0;
-	}
-}
-
-uint32_t getColorForIndex(uint8_t i) {
-	return getColorForEnum(getColorConstantForIndex(i));
-}
-
 void turnOffStrip() {
   for (uint8_t i = 0; i < NUM_LEDS; i++) {
     chain.setPixelColor(i, 0);
   }
   chain.show();  // Initialize all pixels to 'off'
-}
-
-uint8_t getIndexForLetter(char letter) {
-    return (letter < 'I' || letter > 'Q') ? (letter - 'A') : (24 - letter + 'A');
 }
 
 void blinkNum(uint8_t num, uint32_t color) {
