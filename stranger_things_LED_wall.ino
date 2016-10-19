@@ -17,32 +17,31 @@
 #define MESSAGE				3	// Button 4 - The LEDs light up to spell a message
 
 // Light Colors - Change these to tweak colors
-#define YELLOW		0xFFFF00
+#define WHITE		0xFFFCCC
 #define BLUE 		0x0000FF
-#define RED			0xFF0000
-#define GREEN		0x00FF00
-#define ORANGE		0xFF9A00
+#define RED			0xFF0057
+#define GREEN		0x00FF7D
+#define ORANGE		0xFFC000
 
 // Colors for each light in the chain. The order corresponds to the index order of the neopixels, not alphabetical.
 uint32_t getColorForIndex(uint8_t i) {
 	switch (i) {
 		case 0:		// A
 		case 18:	// S
-			return YELLOW;
+			return WHITE;
 		
 		case 1:		// B
 		case 4:		// E
 		case 14:	// K
 		case 20:	// U
-		case 22:	// W
 			return BLUE;
 		
 		case 2:		// C
 		case 6:		// G
-		case 8:		// Q
-		case 10:	// O
-		case 11:	// N
 		case 15:	// J
+		case 11:	// N
+		case 10:	// O
+		case 8:		// Q
 		case 21:	// V
 		case 24:	// Y
 		case 25:	// Z
@@ -50,10 +49,11 @@ uint32_t getColorForIndex(uint8_t i) {
 		
 		case 3:		// D
 		case 7:		// H
-		case 9:		// P
-		case 13:	// L
 		case 16:	// I
+		case 13:	// L
+		case 9:		// P
 		case 17:	// R
+		case 22:	// W
 			return GREEN;
 		
 		case 5:		// F
