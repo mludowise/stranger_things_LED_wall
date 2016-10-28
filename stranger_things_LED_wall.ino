@@ -26,40 +26,40 @@
 // Colors for each light in the chain. The order corresponds to the index order of the neopixels, not alphabetical.
 uint32_t getColorForIndex(uint8_t i) {
 	switch (i) {
-		case 0:		// A
-		case 18:	// S
+		case 25:	// A
+		case 7:		// S
 			return WHITE;
 		
-		case 1:		// B
-		case 4:		// E
-		case 14:	// K
-		case 20:	// U
+		case 24:	// B
+		case 21:	// E
+		case 11:	// K
+		case 5:		// U
 			return BLUE;
 		
-		case 2:		// C
-		case 6:		// G
-		case 15:	// J
-		case 11:	// N
-		case 10:	// O
-		case 8:		// Q
-		case 21:	// V
-		case 24:	// Y
-		case 25:	// Z
+		case 23:	// C
+		case 19:	// G
+		case 10:	// J
+		case 14:	// N
+		case 15:	// O
+		case 17:	// Q
+		case 4:		// V
+		case 1:		// Y
+		case 0:		// Z
 			return RED;
 		
-		case 3:		// D
-		case 7:		// H
-		case 16:	// I
-		case 13:	// L
-		case 9:		// P
-		case 17:	// R
-		case 22:	// W
+		case 22:	// D
+		case 18:	// H
+		case 9:		// I
+		case 12:	// L
+		case 16:	// P
+		case 8:		// R
+		case 3:		// W
 			return GREEN;
 		
-		case 5:		// F
-		case 12:	// M
-		case 19:	// T
-		case 23:	// X
+		case 20:	// F
+		case 13:	// M
+		case 6:		// T
+		case 2:		// X
 			return ORANGE;
 	}
 }
@@ -67,7 +67,7 @@ uint32_t getColorForIndex(uint8_t i) {
 // Returns the index (0-25) of the LED for the corresponding letter
 uint8_t getIndexForLetter(char letter) {
 	// Use this if letters are zig-zag in the chain
-    return (letter < 'I' || letter > 'Q') ? (letter - 'A') : (24 - letter + 'A');
+    return (letter < 'I' || letter > 'Q') ? NUM_LEDS - 1 - (letter - 'A') : (letter - 'A' + 1);
 
     // Use this if letters are sequential instead of zig-zag
 //    return letter - 'A';
@@ -76,9 +76,9 @@ uint8_t getIndexForLetter(char letter) {
 uint8_t mode = MESSAGE;							// Change this to set the default mode of the LEDs (must be BLINK, SEQUENCE_SINGLE, SEQUENCE_CUMULATIVE, or MESSAGE).
 char message[MAX_MSG_LEN + 1] = "RIGHTHERE";	// Change this to set the default message (must be uppercase and letters only).
 
-uint8_t index = 0;
+int index = 0;
 SoftwareSerial bt = SoftwareSerial(RX_PIN, -1);
-Adafruit_NeoPixel chain = Adafruit_NeoPixel(NUM_LEDS, LED_OUTPUT);
+Adafruit_NeoPixel chain = Adafruit_NeoPixel(NUM_LEDS, LED_OUTPUT, NEO_RGB + NEO_KHZ800);
 
 void setup() {
 	#if defined(__AVR_ATtiny85__) && (F_CPU == 16000000L)
@@ -130,18 +130,18 @@ void doBlink() {
 // Sequence Mode -----------------------------------
 
 void doSequenceSingle() {
-    if (index > 0) {
+    if (index < NUM_LEDS - 1) {
         // Turn off previous color
-        chain.setPixelColor(index - 1, 0);
+        chain.setPixelColor(index + 1, 0);
     }
-    index %= NUM_LEDS;
+    index = (index + NUM_LEDS) % NUM_LEDS;
     doSequence();
 }
 
 void doSequenceCumulative() {
-    if (index >= NUM_LEDS) {
+    if (index < 0) {
         turnOffStrip();
-        index = 0;
+        index = NUM_LEDS - 1;
         setWait(1000);
     } else {
         doSequence();
@@ -149,8 +149,9 @@ void doSequenceCumulative() {
 }
 
 void doSequence() {
-    chain.setPixelColor(index++, getColorForIndex(index));
+    chain.setPixelColor(index, getColorForIndex(index));
     chain.show();
+    index--;
     setWait(500);
 }
 
@@ -203,6 +204,14 @@ void checkBluetooth() {
 	if (c == '!') {
 		if (parseMode() >= 0) {
 			turnOff1s();
+			switch (mode) {	// For sequence, start with 'A'
+				case SEQUENCE_SINGLE:
+				case SEQUENCE_CUMULATIVE:
+					index = NUM_LEDS - 1;
+					break;
+				default:
+					index = 0;
+			}
 		}
 	} else {
 		parseMessage(c);
